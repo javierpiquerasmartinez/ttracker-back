@@ -75,17 +75,19 @@ export class PdfService {
       }
 
       doc.fontSize(18).text('Reporte de Horas', { align: 'center' });
-      doc.moveDown(0.3);
+      doc.moveDown(0.5);
       doc.fontSize(13).text(project.name, { align: 'center' });
-      doc.moveDown(0.2);
+      doc.moveDown(0.4);
       doc.fontSize(10).fillColor('#444').text(`Cliente: ${project.client?.name || 'N/A'}`, { align: 'center' });
+      doc.moveDown(0.5);
 
       const periodo = fromDate && toDate
         ? `${fromDate} - ${toDate}`
         : 'Todos los registros';
       doc.fontSize(9).fillColor('#555').text(`Periodo: ${periodo}`, { align: 'center' });
+      doc.moveDown(0.5);
       doc.fontSize(9).text(`Generado: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, { align: 'center' });
-      doc.moveDown(0.8);
+      doc.moveDown(1.2);
 
       const colSpecs = columns.map((c) => ({ ...c, x: c.x + MARGIN }));
       const headerTop = doc.y;
