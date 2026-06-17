@@ -2,8 +2,22 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 const PDFDocument = require('pdfkit');
+import * as fs from 'fs';
+import * as path from 'path';
 import { TimeRecord } from './time-record.entity';
 import { Project } from '../projects/project.entity';
+
+const PAGE_W = 595;
+const MARGIN = 50;
+const ROW_PAD = 4;
+
+const columns = [
+  { label: 'Fecha', x: 0, w: 65 },
+  { label: 'Inicio', x: 65, w: 50 },
+  { label: 'Fin', x: 115, w: 50 },
+  { label: 'Descripcion', x: 165, w: 245 },
+  { label: 'Horas', x: 410, w: 85 },
+];
 
 @Injectable()
 export class PdfService {
@@ -26,26 +40,15 @@ export class PdfService {
     });
     if (!project) throw new NotFoundException('Proyecto no encontrado');
 
-    const where: any = {
-      user_id: userId,
-      project_id: projectId,
-    };
-    if (fromDate || toDate) {
-      const qb = this.timeRecordsRepository.createQueryBuilder('tr');
-      qb.where('tr.user_id = :userId', { userId })
-        .andWhere('tr.project_id = :projectId', { projectId })
-        .andWhere("tr.record_type != 'running'");
-      if (fromDate) qb.andWhere('tr.date >= :fromDate', { fromDate });
-      if (toDate) qb.andWhere('tr.date <= :toDate', { toDate });
-      qb.orderBy('tr.date', 'ASC').addOrderBy('tr.start_time', 'ASC');
-      const records = await qb.getMany();
-      return this.buildPdf(project, records, fromDate, toDate);
-    }
+    const qb = this.timeRecordsRepository.createQueryBuilder('tr');
+    qb.where('tr.user_id = :userId', { userId })
+      .andWhere('tr.project_id = :projectId', { projectId })
+      .andWhere("tr.record_type != 'running'");
+    if (fromDate) qb.andWhere('tr.date >= :fromDate', { fromDate });
+    if (toDate) qb.andWhere('tr.date <= :toDate', { toDate });
+    qb.orderBy('tr.date', 'ASC').addOrderBy('tr.start_time', 'ASC');
+    const records = await qb.getMany();
 
-    const records = await this.timeRecordsRepository.find({
-      where,
-      order: { date: 'ASC', start_time: 'ASC' },
-    });
     return this.buildPdf(project, records, fromDate, toDate);
   }
 
@@ -56,77 +59,82 @@ export class PdfService {
     toDate?: string,
   ): Promise<Buffer> {
     return new Promise((resolve) => {
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const doc = new PDFDocument({ margin: MARGIN, size: 'A4' });
       const chunks: Buffer[] = [];
-
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
 
+      const logoPath = path.resolve(__dirname, '../../assets/logo.png');
+      if (fs.existsSync(logoPath)) {
+        try {
+          doc.image(logoPath, MARGIN, 35, { width: 44 });
+        } catch {
+          /* ignore */
+        }
+      }
+
       doc.fontSize(18).text('Reporte de Horas', { align: 'center' });
-      doc.moveDown(0.5);
-      doc.fontSize(14).text(project.name, { align: 'center' });
       doc.moveDown(0.3);
-      doc.fontSize(11).text(`Cliente: ${project.client?.name || 'N/A'}`, { align: 'center' });
+      doc.fontSize(13).text(project.name, { align: 'center' });
+      doc.moveDown(0.2);
+      doc.fontSize(10).fillColor('#444').text(`Cliente: ${project.client?.name || 'N/A'}`, { align: 'center' });
 
       const periodo = fromDate && toDate
         ? `${fromDate} - ${toDate}`
         : 'Todos los registros';
-      doc.fontSize(10).text(`Periodo: ${periodo}`, { align: 'center' });
-      doc.fontSize(10).text(`Generado: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, { align: 'center' });
+      doc.fontSize(9).fillColor('#555').text(`Periodo: ${periodo}`, { align: 'center' });
+      doc.fontSize(9).text(`Generado: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, { align: 'center' });
+      doc.moveDown(0.6);
 
-      doc.moveDown(1);
+      const colSpecs = columns.map((c) => ({ ...c, x: c.x + MARGIN }));
+      const headerTop = doc.y;
 
-      const tableTop = doc.y;
-      const colX = [50, 130, 250, 370, 470];
-      const colWidths = [80, 120, 120, 100, 70];
+      doc.font('Helvetica-Bold').fontSize(8).fillColor('#333');
+      for (const col of colSpecs) {
+        doc.text(col.label, col.x, headerTop, { width: col.w, align: col.label === 'Horas' ? 'right' : 'left' });
+      }
+      const headerBottom = doc.y + 6;
+      doc.moveTo(MARGIN, headerBottom).lineTo(PAGE_W - MARGIN, headerBottom).stroke('#aaa');
+      doc.y = headerBottom + 4;
 
-      doc.fontSize(9).font('Helvetica-Bold');
-      doc.text('Fecha', colX[0], tableTop, { width: colWidths[0] });
-      doc.text('Inicio', colX[1], tableTop, { width: colWidths[1] });
-      doc.text('Fin', colX[2], tableTop, { width: colWidths[2] });
-      doc.text('Descripcion', colX[3], tableTop, { width: colWidths[3] });
-      doc.text('Horas', colX[4], tableTop, { width: colWidths[4], align: 'right' });
-
-      doc.moveDown(0.3);
-      doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-      doc.moveDown(0.3);
-
-      doc.font('Helvetica').fontSize(8);
+      doc.font('Helvetica').fontSize(8).fillColor('#222');
       let totalMinutes = 0;
 
       for (const record of records) {
-        const y = doc.y;
-        if (y > 750) {
+        const desc = record.description || '';
+        const startStr = record.start_time.substring(0, 5);
+        const endStr = record.end_time.substring(0, 5);
+        const hoursStr = (record.duration_minutes / 60).toFixed(2);
+
+        const descCol = colSpecs[3];
+        const descH = doc.heightOfString(desc, { width: descCol.w - 4 }) + ROW_PAD;
+        const rowH = Math.max(18, descH);
+
+        if (doc.y + rowH > PAGE_W - MARGIN) {
           doc.addPage();
-          doc.font('Helvetica').fontSize(8);
+          doc.font('Helvetica').fontSize(8).fillColor('#222');
         }
 
-        const rowY = doc.y;
-        doc.text(record.date, colX[0], rowY, { width: colWidths[0] });
-        doc.text(record.start_time.substring(0, 5), colX[1], rowY, { width: colWidths[1] });
-        doc.text(record.end_time.substring(0, 5), colX[2], rowY, { width: colWidths[2] });
-        doc.text(
-          (record.description || '').substring(0, 40),
-          colX[3],
-          rowY,
-          { width: colWidths[3] },
-        );
-        const hours = (record.duration_minutes / 60).toFixed(2);
-        doc.text(hours, colX[4], rowY, { width: colWidths[4], align: 'right' });
-        totalMinutes += record.duration_minutes;
+        const y0 = doc.y;
+        doc.text(record.date, colSpecs[0].x, y0 + 3, { width: colSpecs[0].w });
+        doc.text(startStr, colSpecs[1].x, y0 + 3, { width: colSpecs[1].w });
+        doc.text(endStr, colSpecs[2].x, y0 + 3, { width: colSpecs[2].w });
+        doc.text(desc, colSpecs[3].x + 2, y0 + 3, { width: descCol.w - 4, lineBreak: true });
+        doc.text(hoursStr, colSpecs[4].x, y0 + 3, { width: colSpecs[4].w, align: 'right' });
 
-        doc.moveDown(0.5);
-        doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#cccccc');
-        doc.moveDown(0.2);
+        totalMinutes += record.duration_minutes;
+        doc.y = y0 + rowH;
+        doc.moveTo(MARGIN, doc.y).lineTo(PAGE_W - MARGIN, doc.y).stroke('#eee');
+        doc.y += 1;
       }
 
       const totalHours = (totalMinutes / 60).toFixed(2);
       doc.moveDown(1);
-      doc.font('Helvetica-Bold').fontSize(11);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#111');
       doc.text(`Total Horas: ${totalHours}h`, { align: 'right' });
 
-      doc.moveDown(1);
-      doc.fontSize(8).font('Helvetica').fillColor('#888888');
+      doc.moveDown(1.5);
+      doc.fontSize(8).font('Helvetica').fillColor('#888');
       doc.text('Time Tracker - Reporte confidencial', { align: 'center' });
 
       doc.end();
