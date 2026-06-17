@@ -8,8 +8,9 @@ import { TimeRecord } from './time-record.entity';
 import { Project } from '../projects/project.entity';
 
 const PAGE_W = 595;
+const PAGE_H = 842;
 const MARGIN = 50;
-const ROW_PAD = 4;
+const ROW_PAD = 6;
 
 const columns = [
   { label: 'Fecha', x: 0, w: 65 },
@@ -84,20 +85,20 @@ export class PdfService {
         : 'Todos los registros';
       doc.fontSize(9).fillColor('#555').text(`Periodo: ${periodo}`, { align: 'center' });
       doc.fontSize(9).text(`Generado: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, { align: 'center' });
-      doc.moveDown(0.6);
+      doc.moveDown(0.8);
 
       const colSpecs = columns.map((c) => ({ ...c, x: c.x + MARGIN }));
       const headerTop = doc.y;
 
-      doc.font('Helvetica-Bold').fontSize(8).fillColor('#333');
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#333');
       for (const col of colSpecs) {
         doc.text(col.label, col.x, headerTop, { width: col.w, align: col.label === 'Horas' ? 'right' : 'left' });
       }
-      const headerBottom = doc.y + 6;
+      const headerBottom = doc.y + 10;
       doc.moveTo(MARGIN, headerBottom).lineTo(PAGE_W - MARGIN, headerBottom).stroke('#aaa');
-      doc.y = headerBottom + 4;
+      doc.y = headerBottom + 6;
 
-      doc.font('Helvetica').fontSize(8).fillColor('#222');
+      doc.font('Helvetica').fontSize(9).fillColor('#222');
       let totalMinutes = 0;
 
       for (const record of records) {
@@ -107,25 +108,25 @@ export class PdfService {
         const hoursStr = (record.duration_minutes / 60).toFixed(2);
 
         const descCol = colSpecs[3];
-        const descH = doc.heightOfString(desc, { width: descCol.w - 4 }) + ROW_PAD;
-        const rowH = Math.max(18, descH);
+        const descH = doc.heightOfString(desc, { width: descCol.w - 6 }) + ROW_PAD;
+        const rowH = Math.max(22, descH);
 
-        if (doc.y + rowH > PAGE_W - MARGIN) {
+        if (doc.y + rowH > PAGE_H - MARGIN) {
           doc.addPage();
-          doc.font('Helvetica').fontSize(8).fillColor('#222');
+          doc.font('Helvetica').fontSize(9).fillColor('#222');
         }
 
         const y0 = doc.y;
-        doc.text(record.date, colSpecs[0].x, y0 + 3, { width: colSpecs[0].w });
-        doc.text(startStr, colSpecs[1].x, y0 + 3, { width: colSpecs[1].w });
-        doc.text(endStr, colSpecs[2].x, y0 + 3, { width: colSpecs[2].w });
-        doc.text(desc, colSpecs[3].x + 2, y0 + 3, { width: descCol.w - 4, lineBreak: true });
-        doc.text(hoursStr, colSpecs[4].x, y0 + 3, { width: colSpecs[4].w, align: 'right' });
+        doc.text(record.date, colSpecs[0].x, y0 + 4, { width: colSpecs[0].w });
+        doc.text(startStr, colSpecs[1].x, y0 + 4, { width: colSpecs[1].w });
+        doc.text(endStr, colSpecs[2].x, y0 + 4, { width: colSpecs[2].w });
+        doc.text(desc, colSpecs[3].x + 3, y0 + 4, { width: descCol.w - 6, lineBreak: true });
+        doc.text(hoursStr, colSpecs[4].x, y0 + 4, { width: colSpecs[4].w, align: 'right' });
 
         totalMinutes += record.duration_minutes;
         doc.y = y0 + rowH;
         doc.moveTo(MARGIN, doc.y).lineTo(PAGE_W - MARGIN, doc.y).stroke('#eee');
-        doc.y += 1;
+        doc.y += 2;
       }
 
       const totalHours = (totalMinutes / 60).toFixed(2);
