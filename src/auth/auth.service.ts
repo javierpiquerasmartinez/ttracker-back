@@ -19,13 +19,19 @@ export class AuthService {
   ) {}
 
   async login(loginDto: LoginDto) {
+    const email = loginDto.email.toLowerCase().trim();
+    console.log(`[LOGIN] Attempt for: ${email}`);
+    
     const user = await this.usersRepository.findOne({
-      where: { email: loginDto.email.toLowerCase().trim() },
+      where: { email },
     });
 
     if (!user) {
+      console.log(`[LOGIN] User NOT found: ${email}`);
       throw new UnauthorizedException('Email o contraseña incorrectos');
     }
+
+    console.log(`[LOGIN] User found: ${user.id}`);
 
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       const minutes = Math.ceil(
@@ -40,6 +46,7 @@ export class AuthService {
       loginDto.password,
       user.password_hash,
     );
+    console.log(`[LOGIN] Password match: ${isPasswordValid}`);
 
     if (!isPasswordValid) {
       user.login_attempts = (user.login_attempts || 0) + 1;
