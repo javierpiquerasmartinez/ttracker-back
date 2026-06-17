@@ -100,6 +100,12 @@ export class PdfService {
       doc.moveTo(MARGIN, headerBottom).lineTo(PAGE_W - MARGIN, headerBottom).stroke('#aaa');
       doc.y = headerBottom + 6;
 
+      const formatHM = (minutes: number) => {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      };
+
       doc.font('Helvetica').fontSize(9).fillColor('#222');
       let totalMinutes = 0;
 
@@ -107,7 +113,7 @@ export class PdfService {
         const desc = record.description || '';
         const startStr = record.start_time.substring(0, 5);
         const endStr = record.end_time.substring(0, 5);
-        const hoursStr = (record.duration_minutes / 60).toFixed(2);
+        const hoursStr = formatHM(record.duration_minutes);
 
         const descCol = colSpecs[3];
         const descH = doc.heightOfString(desc, { width: descCol.w - 6 }) + ROW_PAD;
@@ -131,10 +137,9 @@ export class PdfService {
         doc.y += 2;
       }
 
-      const totalHours = (totalMinutes / 60).toFixed(2);
       doc.moveDown(1);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#111');
-      doc.text(`Total Horas: ${totalHours}h`, { align: 'right' });
+      doc.text(`Total Horas: ${formatHM(totalMinutes)}`, { align: 'right' });
 
       doc.moveDown(1.5);
       doc.fontSize(8).font('Helvetica').fillColor('#888');
