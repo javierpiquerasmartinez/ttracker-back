@@ -173,11 +173,8 @@ export class TimeRecordsService {
   }
 
   async remove(userId: string, id: string): Promise<void> {
-    const record = await this.timeRecordsRepository.findOne({
-      where: { id, user_id: userId },
-    });
-    if (!record) throw new NotFoundException('Registro no encontrado');
-    await this.timeRecordsRepository.remove(record);
+    const result = await this.timeRecordsRepository.delete({ id, user_id: userId });
+    if (result.affected === 0) throw new NotFoundException('Registro no encontrado');
   }
 
   async getActiveTimer(userId: string): Promise<TimeRecord | null> {
