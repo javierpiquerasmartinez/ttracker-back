@@ -1,10 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -68,6 +69,26 @@ export class AuthService {
         last_name: user.last_name,
       },
     };
+  }
+
+  async register(dto: RegisterDto) {
+    const existing = await this.usersRepository.findOne({
+      where: { email: dto.email.toLowerCase().trim() },
+    });
+    if (existing) {
+      throw new ConflictException('Ya existe un usuario con ese email');
+    }
+
+    const password_hash = await bcrypt.hash(dto.password, 10);
+    const user = this.usersRepository.create({
+      email: dto.email.toLowerCase().trim(),
+      password_hash,
+      first_name: dto.first_name,
+      last_name: dto.last_name,
+    });
+    await this.usersRepository.save(user);
+
+    return { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name };
   }
 
   async seedUser(email: string, password: string): Promise<User> {
