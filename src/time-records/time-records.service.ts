@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { TimeRecord } from './time-record.entity';
@@ -52,7 +56,9 @@ export class TimeRecordsService {
     );
 
     if (durationMinutes < 1) {
-      throw new BadRequestException('La duración debe ser al menos 1 minuto. Si quieres descartarlo, elimínalo.');
+      throw new BadRequestException(
+        'La duración debe ser al menos 1 minuto. Si quieres descartarlo, elimínalo.',
+      );
     }
 
     record.end_time = endTime;
@@ -62,12 +68,17 @@ export class TimeRecordsService {
     return this.timeRecordsRepository.save(record);
   }
 
-  async createManual(userId: string, dto: CreateManualTimeRecordDto): Promise<TimeRecord> {
+  async createManual(
+    userId: string,
+    dto: CreateManualTimeRecordDto,
+  ): Promise<TimeRecord> {
     const startDate = new Date(`${dto.date}T${dto.start_time}`);
     const endDate = new Date(`${dto.date}T${dto.end_time}`);
 
     if (endDate <= startDate) {
-      throw new BadRequestException('La hora fin debe ser mayor que la hora inicio');
+      throw new BadRequestException(
+        'La hora fin debe ser mayor que la hora inicio',
+      );
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -108,8 +119,16 @@ export class TimeRecordsService {
       limit?: number;
     },
   ) {
-    const { projectId, clientId, fromDate, toDate, search, page = 1, limit = 20 } = filters;
-    
+    const {
+      projectId,
+      clientId,
+      fromDate,
+      toDate,
+      search,
+      page = 1,
+      limit = 20,
+    } = filters;
+
     const qb = this.timeRecordsRepository
       .createQueryBuilder('tr')
       .leftJoinAndSelect('tr.project', 'project')
@@ -140,13 +159,19 @@ export class TimeRecordsService {
     return { records, total, page, limit };
   }
 
-  async update(userId: string, id: string, dto: UpdateTimeRecordDto): Promise<TimeRecord> {
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateTimeRecordDto,
+  ): Promise<TimeRecord> {
     const record = await this.timeRecordsRepository.findOne({
       where: { id, user_id: userId },
     });
     if (!record) throw new NotFoundException('Registro no encontrado');
     if (record.record_type === 'running') {
-      throw new BadRequestException('No se puede editar un timer en marcha. Detenlo primero.');
+      throw new BadRequestException(
+        'No se puede editar un timer en marcha. Detenlo primero.',
+      );
     }
 
     const date = dto.date || record.date;
@@ -157,7 +182,9 @@ export class TimeRecordsService {
     const endDate = new Date(`${date}T${endTime}`);
 
     if (endDate <= startDate) {
-      throw new BadRequestException('La hora fin debe ser mayor que la hora inicio');
+      throw new BadRequestException(
+        'La hora fin debe ser mayor que la hora inicio',
+      );
     }
 
     const durationMinutes = Math.round(
@@ -173,8 +200,12 @@ export class TimeRecordsService {
   }
 
   async remove(userId: string, id: string): Promise<void> {
-    const result = await this.timeRecordsRepository.delete({ id, user_id: userId });
-    if (result.affected === 0) throw new NotFoundException('Registro no encontrado');
+    const result = await this.timeRecordsRepository.delete({
+      id,
+      user_id: userId,
+    });
+    if (result.affected === 0)
+      throw new NotFoundException('Registro no encontrado');
   }
 
   async getActiveTimer(userId: string): Promise<TimeRecord | null> {

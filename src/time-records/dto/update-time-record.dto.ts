@@ -1,4 +1,10 @@
-import { IsUUID, IsOptional, IsDateString, Matches, IsString } from 'class-validator';
+import {
+  IsUUID,
+  IsOptional,
+  IsDateString,
+  Matches,
+  IsString,
+} from 'class-validator';
 
 export class UpdateTimeRecordDto {
   @IsOptional()

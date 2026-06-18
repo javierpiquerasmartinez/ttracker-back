@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -10,6 +11,7 @@ import {
 import type { Request as ExpressRequest } from 'express';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
+import { UpdateClientDto } from './dto/update-client.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface AuthRequest extends ExpressRequest {
@@ -34,5 +36,14 @@ export class ClientsController {
   @Get(':id')
   findOne(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.clientsService.findOne(req.user.id, id);
+  }
+
+  @Patch(':id')
+  update(
+    @Request() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateClientDto,
+  ) {
+    return this.clientsService.update(req.user.id, id, dto);
   }
 }

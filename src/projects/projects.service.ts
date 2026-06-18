@@ -1,8 +1,13 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Project } from './project.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -16,7 +21,9 @@ export class ProjectsService {
       where: { client_id: dto.client_id, name: dto.name },
     });
     if (existing) {
-      throw new ConflictException('Ya existe un proyecto con ese nombre en este cliente');
+      throw new ConflictException(
+        'Ya existe un proyecto con ese nombre en este cliente',
+      );
     }
     const project = this.projectsRepository.create({
       ...dto,
@@ -43,5 +50,35 @@ export class ProjectsService {
     });
     if (!project) throw new NotFoundException('Proyecto no encontrado');
     return project;
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateProjectDto,
+  ): Promise<Project> {
+    const project = await this.projectsRepository.findOne({
+      where: { id, user_id: userId },
+      relations: ['client'],
+    });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+
+    if (dto.name && dto.name !== project.name) {
+      const duplicate = await this.projectsRepository.findOne({
+        where: {
+          client_id: project.client_id,
+          name: dto.name,
+          id: Not(id),
+        },
+      });
+      if (duplicate) {
+        throw new ConflictException(
+          'Ya existe un proyecto con ese nombre en este cliente',
+        );
+      }
+    }
+
+    Object.assign(project, dto);
+    return this.projectsRepository.save(project);
   }
 }

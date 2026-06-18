@@ -10,11 +10,7 @@ export class DashboardService {
     private timeRecordsRepository: Repository<TimeRecord>,
   ) {}
 
-  async getSummary(
-    userId: string,
-    fromDate: string,
-    toDate: string,
-  ) {
+  async getSummary(userId: string, fromDate: string, toDate: string) {
     const records = await this.timeRecordsRepository
       .createQueryBuilder('tr')
       .leftJoinAndSelect('tr.project', 'project')
@@ -26,13 +22,25 @@ export class DashboardService {
       .orderBy('tr.date', 'ASC')
       .getMany();
 
-    const totalMinutes = records.reduce((sum, r) => sum + r.duration_minutes, 0);
+    const totalMinutes = records.reduce(
+      (sum, r) => sum + r.duration_minutes,
+      0,
+    );
     const totalHours = totalMinutes / 60;
 
     const uniqueDays = new Set(records.map((r) => r.date)).size;
     const avgHoursPerDay = uniqueDays > 0 ? totalHours / uniqueDays : 0;
 
-    const byProject = new Map<string, { clientName: string; projectName: string; minutes: number; projectId: string; clientId: string }>();
+    const byProject = new Map<
+      string,
+      {
+        clientName: string;
+        projectName: string;
+        minutes: number;
+        projectId: string;
+        clientId: string;
+      }
+    >();
     for (const r of records) {
       const key = r.project_id;
       const existing = byProject.get(key);

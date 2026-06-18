@@ -78,15 +78,25 @@ export class PdfService {
       doc.moveDown(0.5);
       doc.fontSize(13).text(project.name, { align: 'center' });
       doc.moveDown(0.4);
-      doc.fontSize(10).fillColor('#444').text(`Cliente: ${project.client?.name || 'N/A'}`, { align: 'center' });
+      doc
+        .fontSize(10)
+        .fillColor('#444')
+        .text(`Cliente: ${project.client?.name || 'N/A'}`, { align: 'center' });
       doc.moveDown(0.5);
 
-      const periodo = fromDate && toDate
-        ? `${fromDate} - ${toDate}`
-        : 'Todos los registros';
-      doc.fontSize(9).fillColor('#555').text(`Periodo: ${periodo}`, { align: 'center' });
+      const periodo =
+        fromDate && toDate ? `${fromDate} - ${toDate}` : 'Todos los registros';
+      doc
+        .fontSize(9)
+        .fillColor('#555')
+        .text(`Periodo: ${periodo}`, { align: 'center' });
       doc.moveDown(0.5);
-      doc.fontSize(9).text(`Generado: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, { align: 'center' });
+      doc
+        .fontSize(9)
+        .text(
+          `Generado: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+          { align: 'center' },
+        );
       doc.moveDown(1.2);
 
       const colSpecs = columns.map((c) => ({ ...c, x: c.x + MARGIN }));
@@ -94,10 +104,16 @@ export class PdfService {
 
       doc.font('Helvetica-Bold').fontSize(9).fillColor('#333');
       for (const col of colSpecs) {
-        doc.text(col.label, col.x, headerTop, { width: col.w, align: col.label === 'Horas' ? 'right' : 'left' });
+        doc.text(col.label, col.x, headerTop, {
+          width: col.w,
+          align: col.label === 'Horas' ? 'right' : 'left',
+        });
       }
       const headerBottom = doc.y + 10;
-      doc.moveTo(MARGIN, headerBottom).lineTo(PAGE_W - MARGIN, headerBottom).stroke('#aaa');
+      doc
+        .moveTo(MARGIN, headerBottom)
+        .lineTo(PAGE_W - MARGIN, headerBottom)
+        .stroke('#aaa');
       doc.y = headerBottom + 6;
 
       const formatHM = (minutes: number) => {
@@ -116,7 +132,8 @@ export class PdfService {
         const hoursStr = formatHM(record.duration_minutes);
 
         const descCol = colSpecs[3];
-        const descH = doc.heightOfString(desc, { width: descCol.w - 6 }) + ROW_PAD;
+        const descH =
+          doc.heightOfString(desc, { width: descCol.w - 6 }) + ROW_PAD;
         const rowH = Math.max(22, descH);
 
         if (doc.y + rowH > PAGE_H - MARGIN) {
@@ -128,12 +145,21 @@ export class PdfService {
         doc.text(record.date, colSpecs[0].x, y0 + 4, { width: colSpecs[0].w });
         doc.text(startStr, colSpecs[1].x, y0 + 4, { width: colSpecs[1].w });
         doc.text(endStr, colSpecs[2].x, y0 + 4, { width: colSpecs[2].w });
-        doc.text(desc, colSpecs[3].x + 3, y0 + 4, { width: descCol.w - 6, lineBreak: true });
-        doc.text(hoursStr, colSpecs[4].x, y0 + 4, { width: colSpecs[4].w, align: 'right' });
+        doc.text(desc, colSpecs[3].x + 3, y0 + 4, {
+          width: descCol.w - 6,
+          lineBreak: true,
+        });
+        doc.text(hoursStr, colSpecs[4].x, y0 + 4, {
+          width: colSpecs[4].w,
+          align: 'right',
+        });
 
         totalMinutes += record.duration_minutes;
         doc.y = y0 + rowH;
-        doc.moveTo(MARGIN, doc.y).lineTo(PAGE_W - MARGIN, doc.y).stroke('#eee');
+        doc
+          .moveTo(MARGIN, doc.y)
+          .lineTo(PAGE_W - MARGIN, doc.y)
+          .stroke('#eee');
         doc.y += 2;
       }
 
@@ -143,7 +169,7 @@ export class PdfService {
 
       doc.moveDown(1.5);
       doc.fontSize(8).font('Helvetica').fillColor('#888');
-      doc.text('Time Tracker - Reporte confidencial', { align: 'center' });
+      doc.text('Slott - Reporte confidencial', { align: 'center' });
 
       doc.end();
     });

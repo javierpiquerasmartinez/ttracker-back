@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -11,6 +12,7 @@ import {
 import type { Request as ExpressRequest } from 'express';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 interface AuthRequest extends ExpressRequest {
@@ -35,5 +37,14 @@ export class ProjectsController {
   @Get(':id')
   findOne(@Request() req: AuthRequest, @Param('id') id: string) {
     return this.projectsService.findOne(req.user.id, id);
+  }
+
+  @Patch(':id')
+  update(
+    @Request() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    return this.projectsService.update(req.user.id, id, dto);
   }
 }

@@ -48,7 +48,10 @@ export class TimeRecordsController {
   }
 
   @Post('manual')
-  createManual(@Request() req: AuthRequest, @Body() dto: CreateManualTimeRecordDto) {
+  createManual(
+    @Request() req: AuthRequest,
+    @Body() dto: CreateManualTimeRecordDto,
+  ) {
     return this.timeRecordsService.createManual(req.user.id, dto);
   }
 
@@ -75,7 +78,11 @@ export class TimeRecordsController {
   }
 
   @Patch(':id')
-  update(@Request() req: AuthRequest, @Param('id') id: string, @Body() dto: UpdateTimeRecordDto) {
+  update(
+    @Request() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateTimeRecordDto,
+  ) {
     return this.timeRecordsService.update(req.user.id, id, dto);
   }
 

@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
@@ -21,7 +25,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const email = loginDto.email.toLowerCase().trim();
     console.log(`[LOGIN] Attempt for: ${email}`);
-    
+
     const user = await this.usersRepository.findOne({
       where: { email },
     });
@@ -95,7 +99,12 @@ export class AuthService {
     });
     await this.usersRepository.save(user);
 
-    return { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name };
+    return {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+    };
   }
 
   async seedUser(email: string, password: string): Promise<User> {

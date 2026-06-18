@@ -19,8 +19,11 @@ export class DashboardController {
     @Query('to') to: string,
   ) {
     const today = new Date();
-    const fromDate = from || new Date(today.getFullYear(), today.getMonth(), 1)
-      .toISOString().split('T')[0];
+    const fromDate =
+      from ||
+      new Date(today.getFullYear(), today.getMonth(), 1)
+        .toISOString()
+        .split('T')[0];
     const toDate = to || today.toISOString().split('T')[0];
 
     return this.dashboardService.getSummary(req.user.id, fromDate, toDate);

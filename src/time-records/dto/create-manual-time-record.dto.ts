@@ -1,4 +1,10 @@
-import { IsUUID, IsString, IsOptional, IsDateString, Matches } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsOptional,
+  IsDateString,
+  Matches,
+} from 'class-validator';
 
 export class CreateManualTimeRecordDto {
   @IsUUID()
