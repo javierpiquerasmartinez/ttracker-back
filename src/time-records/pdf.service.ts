@@ -13,12 +13,11 @@ const MARGIN = 50;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const ROW_PAD = 6;
 const ROW_MIN_H = 24;
+const FOOTER_Y = PAGE_H - 28;
 
 const BRAND = '#863bff';
 const BRAND_50 = '#f5f0ff';
 const BRAND_700 = '#7a2cf0';
-const AMBER_100 = '#fef3c7';
-const AMBER_700 = '#b45309';
 const GRAY_100 = '#f3f4f6';
 const GRAY_300 = '#d1d5db';
 const GRAY_500 = '#6b7280';
@@ -29,8 +28,7 @@ const columns = [
   { label: 'Fecha', x: 0, w: 62, align: 'left' as const },
   { label: 'Inicio', x: 62, w: 42, align: 'left' as const },
   { label: 'Fin', x: 104, w: 42, align: 'left' as const },
-  { label: 'Descripción', x: 146, w: 215, align: 'left' as const },
-  { label: 'Tipo', x: 361, w: 50, align: 'center' as const },
+  { label: 'Descripción', x: 146, w: 265, align: 'left' as const },
   { label: 'Horas', x: 411, w: 84, align: 'right' as const },
 ];
 
@@ -145,7 +143,7 @@ export class PdfService {
     doc.y = metaY + 36;
   }
 
-  private drawTableHeader(doc: PDFKit.PDFDocument): number {
+  private drawTableHeader(doc: PDFKit.PDFDocument): void {
     const colSpecs = columns.map((c) => ({ ...c, x: c.x + MARGIN }));
     const headerTop = doc.y;
     const headerH = 22;
@@ -161,28 +159,15 @@ export class PdfService {
     }
 
     doc.y = headerTop + headerH;
-    return doc.y;
   }
 
-  private drawTypeChip(
-    doc: PDFKit.PDFDocument,
-    x: number,
-    y: number,
-    w: number,
-    type: string,
-  ): void {
-    const isAuto = type === 'automatic';
-    const bg = isAuto ? BRAND_50 : AMBER_100;
-    const fg = isAuto ? BRAND_700 : AMBER_700;
-    const label = isAuto ? 'Auto' : 'Manual';
-    const chipH = 14;
-    const chipW = 38;
-    const chipX = x + (w - chipW) / 2;
-    const chipY = y + 2;
-
-    doc.roundedRect(chipX, chipY, chipW, chipH, 3).fill(bg);
-    doc.font('Helvetica-Bold').fontSize(7).fillColor(fg);
-    doc.text(label, chipX, chipY + 3, { width: chipW, align: 'center' });
+  private drawFooter(doc: PDFKit.PDFDocument, page: number, total: number): void {
+    doc.font('Helvetica').fontSize(7).fillColor(GRAY_300);
+    doc.text(`Slott · ${page}/${total}`, MARGIN, FOOTER_Y, {
+      width: CONTENT_W,
+      align: 'center',
+      lineBreak: false,
+    });
   }
 
   private buildPdf(
@@ -208,7 +193,7 @@ export class PdfService {
       doc.font('Helvetica').fontSize(9).fillColor(GRAY_700);
       let totalMinutes = 0;
 
-      const drawRow = (record: TimeRecord) => {
+      for (const record of records) {
         const desc = record.description || '';
         const startStr = record.start_time.substring(0, 5);
         const endStr = record.end_time.substring(0, 5);
@@ -248,11 +233,9 @@ export class PdfService {
           lineBreak: true,
         });
 
-        this.drawTypeChip(doc, colSpecs[4].x, y0 + 2, colSpecs[4].w, record.record_type);
-
         doc.font('Helvetica-Bold').fontSize(9).fillColor(GRAY_900);
-        doc.text(hoursStr, colSpecs[5].x, y0 + 6, {
-          width: colSpecs[5].w,
+        doc.text(hoursStr, colSpecs[4].x, y0 + 6, {
+          width: colSpecs[4].w,
           align: 'right',
         });
         doc.font('Helvetica').fontSize(9).fillColor(GRAY_700);
@@ -266,10 +249,6 @@ export class PdfService {
           .strokeColor(GRAY_100)
           .stroke();
         doc.y += 2;
-      };
-
-      for (const record of records) {
-        drawRow(record);
       }
 
       doc.moveDown(1);
@@ -296,21 +275,11 @@ export class PdfService {
         align: 'right',
       });
 
-      doc.y = totalY + 64;
-
-      doc.font('Helvetica').fontSize(8).fillColor(GRAY_500);
-      doc.text('Generado con Slott', { align: 'center' });
-
       const range = doc.bufferedPageRange();
-      for (let i = range.start; i < range.start + range.count; i++) {
+      const totalPages = range.count;
+      for (let i = range.start; i < range.start + totalPages; i++) {
         doc.switchToPage(i);
-        doc.font('Helvetica').fontSize(7).fillColor(GRAY_300);
-        doc.text(
-          `Slott · ${i + 1}/${range.count}`,
-          MARGIN,
-          PAGE_H - 24,
-          { width: CONTENT_W, align: 'center' },
-        );
+        this.drawFooter(doc, i + 1, totalPages);
       }
 
       doc.end();
