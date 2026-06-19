@@ -99,12 +99,14 @@ export class TimeRecordsController {
     @Query('projectId') projectId: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
+    @Query('tz') tz?: string,
   ) {
     const pdfBuffer = await this.pdfService.generateProjectReport(
       req.user.id,
       projectId,
       fromDate,
       toDate,
+      tz,
     );
     return new StreamableFile(pdfBuffer);
   }

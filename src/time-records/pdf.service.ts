@@ -48,6 +48,27 @@ const formatDateEs = (d: Date) =>
     minute: '2-digit',
   });
 
+function convertUtcTimeToLocal(
+  utcTime: string,
+  dateStr: string,
+  timeZone: string,
+): { time: string; date: string } {
+  const utcDate = new Date(`${dateStr}T${utcTime}Z`);
+  const time = utcDate.toLocaleTimeString('es-ES', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const date = utcDate.toLocaleDateString('es-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return { time, date };
+}
+
 @Injectable()
 export class PdfService {
   constructor(
@@ -62,6 +83,7 @@ export class PdfService {
     projectId: string,
     fromDate?: string,
     toDate?: string,
+    tz?: string,
   ): Promise<Buffer> {
     const project = await this.projectsRepository.findOne({
       where: { id: projectId, user_id: userId },
@@ -78,7 +100,7 @@ export class PdfService {
     qb.orderBy('tr.date', 'ASC').addOrderBy('tr.start_time', 'ASC');
     const records = await qb.getMany();
 
-    return this.buildPdf(project, records, fromDate, toDate);
+    return this.buildPdf(project, records, fromDate, toDate, tz);
   }
 
   private drawHeader(doc: PDFKit.PDFDocument, project: Project): void {
@@ -118,6 +140,7 @@ export class PdfService {
     project: Project,
     fromDate?: string,
     toDate?: string,
+    tz?: string,
   ): void {
     const periodo =
       fromDate && toDate ? `${fromDate} — ${toDate}` : 'Todos los registros';
@@ -137,7 +160,10 @@ export class PdfService {
     doc.text(periodo, MARGIN + CONTENT_W / 3, metaY + 12, {
       width: CONTENT_W / 3,
     });
-    doc.text(formatDateEs(new Date()), MARGIN + (CONTENT_W / 3) * 2, metaY + 12, {
+    const generatedDate = tz
+      ? new Date().toLocaleString('es-ES', { timeZone: tz, day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : formatDateEs(new Date());
+    doc.text(generatedDate, MARGIN + (CONTENT_W / 3) * 2, metaY + 12, {
       width: CONTENT_W / 3,
     });
 
@@ -178,6 +204,7 @@ export class PdfService {
     records: TimeRecord[],
     fromDate?: string,
     toDate?: string,
+    tz?: string,
   ): Promise<Buffer> {
     return new Promise((resolve) => {
       const doc = new PDFDocument({ margin: MARGIN, size: 'A4' });
@@ -186,7 +213,7 @@ export class PdfService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
 
       this.drawHeader(doc, project);
-      this.drawMeta(doc, project, fromDate, toDate);
+      this.drawMeta(doc, project, fromDate, toDate, tz);
       doc.moveDown(0.8);
 
       const colSpecs = columns.map((c) => ({ ...c, x: c.x + MARGIN }));
@@ -198,8 +225,12 @@ export class PdfService {
 
       for (const record of records) {
         const desc = record.description || '';
-        const startStr = record.start_time.substring(0, 5);
-        const endStr = record.end_time.substring(0, 5);
+        const timeZone = tz || 'UTC';
+        const startLocal = convertUtcTimeToLocal(record.start_time, record.date, timeZone);
+        const endLocal = convertUtcTimeToLocal(record.end_time, record.date, timeZone);
+        const startStr = startLocal.time;
+        const endStr = endLocal.time;
+        const displayDate = startLocal.date;
         const hoursStr = formatHM(record.duration_minutes);
 
         const descCol = colSpecs[3];
@@ -218,7 +249,7 @@ export class PdfService {
         const y0 = doc.y;
 
         doc.fillColor(GRAY_900);
-        doc.text(record.date, colSpecs[0].x, y0 + 6, {
+        doc.text(displayDate, colSpecs[0].x, y0 + 6, {
           width: colSpecs[0].w,
           align: 'left',
         });
