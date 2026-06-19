@@ -13,7 +13,8 @@ const MARGIN = 50;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const ROW_PAD = 6;
 const ROW_MIN_H = 24;
-const FOOTER_Y = PAGE_H - 28;
+const FOOTER_Y = PAGE_H - MARGIN - 14;
+const BOTTOM_LIMIT = PAGE_H - MARGIN - 50;
 
 const BRAND = '#863bff';
 const BRAND_50 = '#f5f0ff';
@@ -161,13 +162,15 @@ export class PdfService {
     doc.y = headerTop + headerH;
   }
 
-  private drawFooter(doc: PDFKit.PDFDocument, page: number, total: number): void {
+  private drawFooter(doc: PDFKit.PDFDocument): void {
+    const prevY = doc.y;
     doc.font('Helvetica').fontSize(7).fillColor(GRAY_300);
-    doc.text(`Slott · ${page}/${total}`, MARGIN, FOOTER_Y, {
+    doc.text('Slott', MARGIN, FOOTER_Y, {
       width: CONTENT_W,
       align: 'center',
       lineBreak: false,
     });
+    doc.y = prevY;
   }
 
   private buildPdf(
@@ -177,7 +180,7 @@ export class PdfService {
     toDate?: string,
   ): Promise<Buffer> {
     return new Promise((resolve) => {
-      const doc = new PDFDocument({ margin: MARGIN, size: 'A4', bufferPages: true });
+      const doc = new PDFDocument({ margin: MARGIN, size: 'A4' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -205,7 +208,8 @@ export class PdfService {
           ROW_PAD;
         const rowH = Math.max(ROW_MIN_H, descH);
 
-        if (doc.y + rowH > PAGE_H - MARGIN - 60) {
+        if (doc.y + rowH > BOTTOM_LIMIT) {
+          this.drawFooter(doc);
           doc.addPage();
           this.drawTableHeader(doc);
           doc.font('Helvetica').fontSize(9).fillColor(GRAY_700);
@@ -253,7 +257,8 @@ export class PdfService {
 
       doc.moveDown(1);
 
-      if (doc.y + 50 > PAGE_H - MARGIN) {
+      if (doc.y + 50 > BOTTOM_LIMIT) {
+        this.drawFooter(doc);
         doc.addPage();
       }
 
@@ -275,12 +280,7 @@ export class PdfService {
         align: 'right',
       });
 
-      const range = doc.bufferedPageRange();
-      const totalPages = range.count;
-      for (let i = range.start; i < range.start + totalPages; i++) {
-        doc.switchToPage(i);
-        this.drawFooter(doc, i + 1, totalPages);
-      }
+      this.drawFooter(doc);
 
       doc.end();
     });
