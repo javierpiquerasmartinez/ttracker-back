@@ -26,12 +26,13 @@ export class TimeRecordsService {
     }
 
     const now = new Date();
+    const iso = now.toISOString();
     const record = this.timeRecordsRepository.create({
       user_id: userId,
       project_id: dto.project_id,
-      date: now.toISOString().split('T')[0],
-      start_time: now.toTimeString().split(' ')[0],
-      end_time: now.toTimeString().split(' ')[0],
+      date: iso.split('T')[0],
+      start_time: iso.split('T')[1].split('.')[0],
+      end_time: iso.split('T')[1].split('.')[0],
       duration_minutes: 0,
       description: dto.description || '',
       record_type: 'running',
@@ -53,9 +54,10 @@ export class TimeRecordsService {
     }
 
     const now = new Date();
-    const endTime = now.toTimeString().split(' ')[0];
-    const startDate = new Date(`${record.date}T${record.start_time}`);
-    const endDate = new Date(`${now.toISOString().split('T')[0]}T${endTime}`);
+    const iso = now.toISOString();
+    const endTime = iso.split('T')[1].split('.')[0];
+    const startDate = new Date(`${record.date}T${record.start_time}Z`);
+    const endDate = new Date(`${iso.split('T')[0]}T${endTime}Z`);
     const durationMinutes = Math.round(
       (endDate.getTime() - startDate.getTime()) / 60000,
     );
@@ -69,7 +71,6 @@ export class TimeRecordsService {
     record.end_time = endTime;
     record.duration_minutes = durationMinutes;
     record.record_type = 'automatic';
-    record.date = now.toISOString().split('T')[0];
     return this.timeRecordsRepository.save(record);
   }
 
