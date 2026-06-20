@@ -36,12 +36,17 @@ export class TimeRecordsService {
       description: dto.description || '',
       record_type: 'running',
     });
-    return this.timeRecordsRepository.save(record);
+    const saved = await this.timeRecordsRepository.save(record);
+    return (await this.timeRecordsRepository.findOne({
+      where: { id: saved.id },
+      relations: ['project'],
+    }))!;
   }
 
   async stopTimer(userId: string, id: string): Promise<TimeRecord> {
     const record = await this.timeRecordsRepository.findOne({
       where: { id, user_id: userId, record_type: 'running' },
+      relations: ['project'],
     });
     if (!record) {
       throw new NotFoundException('No se encontró el timer activo');
