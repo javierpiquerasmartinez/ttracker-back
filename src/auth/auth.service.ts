@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
 import { LoginDto } from './dto/login.dto';
@@ -24,18 +24,14 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const email = loginDto.email.toLowerCase().trim();
-    console.log(`[LOGIN] Attempt for: ${email}`);
 
     const user = await this.usersRepository.findOne({
       where: { email },
     });
 
     if (!user) {
-      console.log(`[LOGIN] User NOT found: ${email}`);
       throw new UnauthorizedException('Email o contraseña incorrectos');
     }
-
-    console.log(`[LOGIN] User found: ${user.id}`);
 
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       const minutes = Math.ceil(
@@ -50,7 +46,6 @@ export class AuthService {
       loginDto.password,
       user.password_hash,
     );
-    console.log(`[LOGIN] Password match: ${isPasswordValid}`);
 
     if (!isPasswordValid) {
       user.login_attempts = (user.login_attempts || 0) + 1;
